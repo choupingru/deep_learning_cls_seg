@@ -28,4 +28,4 @@ class DataloaderClassification(Dataset):
 		image = transform(image)
 		label = torch.LongTensor([label])
 		return {'image' : image, 'label' : label}
-# x = DataloaderClassification()
+

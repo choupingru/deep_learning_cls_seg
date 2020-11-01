@@ -12,7 +12,7 @@ import time
 from os.path import join
 from PIL import Image
 from mean_iou_evaluate import *
-
+from loss import DiceCoefficientLoss
 parser = argparse.ArgumentParser(description='PyTorch DataBowl3 Detector')
 parser.add_argument('--model', '-m', metavar='MODEL', default='base',
 					help='model')
@@ -71,22 +71,17 @@ def main():
 		val_loader = DataloaderSegmentation(mode='validation')
 		val_loader = DataLoader(val_loader, batch_size=args.b)
 	
-
-
-
-	# optimizer = torch.optim.Adam(net.parameters(), lr=args.lr, weight_decay=1e-4)
 	optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
 	
 	pytorch_total_params = sum(p.numel() for p in net.parameters())
 	print("Total number of params = ", pytorch_total_params)
-	if args.task == 1:
-		criterion = torch.nn.CrossEntropyLoss()
-	else:
-		criterion = torch.nn.CrossEntropyLoss()
 
+	if args.task == 1:
+		criterion = torch.nn.CrossEntropyLoss()	
+	else:
+		criterion = DiceCoefficientLoss(7)
 	criterion = criterion.to(device)
 	net = net.to(device)
-
 	for epoch in range(start_epoch, args.epochs + 1):
 		# Train for one epoch
 		print()
@@ -145,12 +140,12 @@ def train(data_loader, net, criterion, epoch, optimizer, task=1):
 	preds = np.concatenate([p for p in preds], 0)
 	labels = np.concatenate([l for l in labels], 0)
 	
-	tp = (preds == labels).sum()
-
-	ac = tp / len(preds)
-
-	print('Train Epoch : %d, AC : %3.2f, Loss : %3.2f, times : %3.2f' % (epoch, ac, total_loss, end_time - start_time))
-
+	if args.task == 1:
+		tp = (preds == labels).sum()
+		ac = tp / len(preds)
+		print('Train Epoch : %d, AC : %3.2f, Loss : %3.2f, times : %3.2f' % (epoch, ac, total_loss, end_time - start_time))
+	else:
+		print('Train Epoch : %d, Loss : %3.f, times : %3.2f' % (epoch, total_loss, end_time - start_time))
 
 
 def validation(data_loader, net, criterion, epoch, task=1):
@@ -172,23 +167,19 @@ def validation(data_loader, net, criterion, epoch, task=1):
 
 			image = datas['image'].to(device)
 			label = datas['label'].to(device)
-			
+			b = label.size(0)
+
 			if task == 2:
 				names = datas['filename']
 
 			pred = net(image)
-			b = label.size(0)
-
 			label = label.view(-1)
 			loss = criterion(pred, label)
-			
 			total_loss += loss.item()
-
 			pred = pred.argmax(1).view(-1).cpu().detach().numpy()
 			label = label.cpu().detach().numpy()
 			preds.append(pred)
 			labels.append(label)
-
 			if task == 2:
 				pred = pred.reshape(b, 512, 512)
 				output = np.zeros((b, 512, 512, 3))
@@ -200,22 +191,19 @@ def validation(data_loader, net, criterion, epoch, task=1):
 					out = Image.fromarray(out.astype(np.uint8))
 					out.save('./pred_mask/'+name+'_pred.png')
 
-		
-
-
-
 	end_time = time.time()
-
 	preds = np.concatenate([p for p in preds], 0)
-	labels = np.concatenate([l for l in labels], 0)
+	labels = np.concatenate([l for l in labels], 0)	
 	
-	tp = (preds == labels).sum()
-	ac = tp / len(preds)
-
-	print('Valid Epoch : %d, AC : %3.2f, Loss : %3.2f, times : %3.2f' % (epoch, ac, total_loss, end_time - start_time))
-	# pred = read_masks('./pred_mask')
-	# label = read_masks('./hw2_data/p2_data/validation')
-	# mean_iou_score(pred, label)
+	if args.task == 1:
+		tp = (preds == labels).sum()
+		ac = tp / len(preds)
+		print('Valid Epoch : %d, AC : %3.2f, Loss : %3.2f, times : %3.2f' % (epoch, ac, total_loss, end_time - start_time))
+	else:
+		pred = read_masks('./pred_mask')
+		label = read_masks('./hw2_data/p2_data/validation')
+		mean_iou_score(pred, label)
+		print('Valid Epoch : %d, Loss : %3.2f, times : %3.2f' % (epoch, total_loss, end_time - start_time))
 	
 	return total_loss / len(data_loader)
 
