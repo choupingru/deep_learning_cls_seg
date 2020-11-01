@@ -9,15 +9,15 @@ bash ./get_dataset.sh
 
 ## Usage
 
-###Training 
+### Training 
 ```bash
 python main.py --task $1 --b $2 --j $3 
 ```
 
-###Testing
+### Testing
 ```bash
 python main.py --task $1 --test
 ```
 
-##About this repo
+### About this repo
 This repo was HW2 from the lesson in National Taiwan University Deep Learning in Computer vision(DLCV).
