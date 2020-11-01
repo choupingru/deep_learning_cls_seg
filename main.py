@@ -80,6 +80,8 @@ def main():
 		criterion = torch.nn.CrossEntropyLoss()	
 	else:
 		criterion = DiceCoefficientLoss(7)
+		# criterion = CrossEntropyLoss()
+		
 	criterion = criterion.to(device)
 	net = net.to(device)
 	for epoch in range(start_epoch, args.epochs + 1):
@@ -194,7 +196,7 @@ def validation(data_loader, net, criterion, epoch, task=1):
 	end_time = time.time()
 	preds = np.concatenate([p for p in preds], 0)
 	labels = np.concatenate([l for l in labels], 0)	
-	
+
 	if args.task == 1:
 		tp = (preds == labels).sum()
 		ac = tp / len(preds)
